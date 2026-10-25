@@ -1,0 +1,49 @@
+name: Infrastructure CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: infra-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate PowerShell scripts and repository files
+        shell: pwsh
+        run: ./scripts/validate-infra.ps1
+      - name: Parse YAML
+        run: |
+          python3 -m venv /tmp/infra-yaml
+          /tmp/infra-yaml/bin/pip install PyYAML==6.0.2
+          /tmp/infra-yaml/bin/python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in [Path("compose.yaml"), Path("render.yaml"), Path(".github/workflows/infra-ci.yml")]:
+              with path.open() as stream:
+                  parsed = yaml.safe_load(stream)
+              assert isinstance(parsed, dict), path
+              print(f"PASS YAML syntax {path}")
+          PY
+      - name: Validate Docker Compose model
+        run: docker compose --env-file .env.example --profile backend config --quiet
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan Git history for secrets
+        run: go run github.com/zricethezav/gitleaks/v8@v8.24.3 git --redact --no-banner .

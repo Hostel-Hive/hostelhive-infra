@@ -1,0 +1,44 @@
+# Review against the existing Render service before importing this Blueprint.
+# Native build commands execute in the BACKEND repository specified below.
+services:
+  - type: web
+    name: hostelhive-backend-dev
+    runtime: go
+    repo: https://github.com/Hostel-Hive/hostelhive-backend
+    branch: develop
+    plan: free
+    autoDeployTrigger: "off"
+    buildCommand: go build -trimpath -o bin/server ./cmd/server
+    startCommand: ./bin/server
+    healthCheckPath: /ready
+    envVars:
+      - key: GO_VERSION
+        value: 1.27.3
+      - key: APP_ENV
+        value: production
+      - key: HTTP_ADDR
+        value: 0.0.0.0:10000
+      - key: DATABASE_URL
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase-service-account.json
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: HOSTEL_TIMEZONE
+        value: Asia/Colombo
+      - key: HOSTEL_EXIT_OPENING
+        value: "06:00"
+      - key: HOSTEL_ENTRY_DEADLINE
+        value: "20:00"
+      - key: RTDB_ENABLED
+        value: "false"
+      - key: R2_ENABLED
+        value: "false"
+      - key: FCM_ENABLED
+        value: "false"
+      - key: STUDENT_INVITATIONS_ENABLED
+        value: "false"
+      - key: STUDENT_EMAIL_DOMAINS
+        value: gmail.com,stu.kln.ac.lk
